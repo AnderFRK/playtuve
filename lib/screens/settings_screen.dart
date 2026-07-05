@@ -48,7 +48,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
       return;
     }
 
-    // Quitamos la barra final si la tiene
     if (url.endsWith('/')) {
       url = url.substring(0, url.length - 1);
     }
@@ -65,7 +64,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
-        // Verificamos que la respuesta tenga el formato esperado de nuestro backend
         var data = jsonDecode(response.body);
         bool esBackendValido = data is Map && data.containsKey('status');
 

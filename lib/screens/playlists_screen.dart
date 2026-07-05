@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:just_audio/just_audio.dart';
 
-// Asegúrate de que esta ruta coincida con el nombre de tu archivo de detalles
 import 'playlist_detail_screen.dart';
 
 class PlaylistsScreen extends StatefulWidget {
@@ -25,7 +24,6 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
     _inicializarBaseDeDatos();
   }
 
-  // 1. Cargar datos guardados
   Future<void> _inicializarBaseDeDatos() async {
     _prefs = await SharedPreferences.getInstance();
     setState(() {
@@ -34,19 +32,16 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
     });
   }
 
-  // 2. Guardar cambios
   Future<void> _guardarCambios() async {
     await _prefs.setStringList('mis_playlists', _nombresPlaylists);
   }
 
-  // 3. Obtener la cantidad de canciones de una playlist
   int _obtenerCantidadCanciones(String nombrePlaylist) {
     List<String> canciones =
         _prefs.getStringList('playlist_$nombrePlaylist') ?? [];
     return canciones.length;
   }
 
-  // 4. Cuadro de diálogo para Crear o Renombrar
   void _mostrarDialogoPlaylist({int? indexParaRenombrar}) {
     TextEditingController controller = TextEditingController();
     bool esRenombrar = indexParaRenombrar != null;
@@ -84,7 +79,6 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
                 if (nombreNuevo.isNotEmpty &&
                     !_nombresPlaylists.contains(nombreNuevo)) {
                   if (esRenombrar) {
-                    // Mover las canciones de la llave vieja a la llave nueva
                     List<String> cancionesGuardadas =
                         _prefs.getStringList('playlist_$nombreAntiguo') ?? [];
                     await _prefs.setStringList(
@@ -97,7 +91,6 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
                       _nombresPlaylists[indexParaRenombrar] = nombreNuevo;
                     });
                   } else {
-                    // Crear nueva playlist vacía
                     setState(() {
                       _nombresPlaylists.add(nombreNuevo);
                     });
@@ -121,16 +114,12 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
     );
   }
 
-  // 5. Confirmación para Eliminar
   Future<void> _eliminarPlaylist(int index) async {
     String nombrePlaylist = _nombresPlaylists[index];
-
     setState(() {
       _nombresPlaylists.removeAt(index);
     });
-
     await _guardarCambios();
-    // Borramos también la música asociada a esa playlist
     await _prefs.remove('playlist_$nombrePlaylist');
   }
 
@@ -146,65 +135,110 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
                 style: TextStyle(color: Colors.grey),
               ),
             )
-          : ListView.builder(
-              padding: const EdgeInsets.all(8),
-              itemCount: _nombresPlaylists.length,
-              itemBuilder: (context, index) {
-                String nombre = _nombresPlaylists[index];
-                int cantidad = _obtenerCantidadCanciones(nombre);
+          : ClipRect(
+              child: ReorderableListView.builder(
+                padding: const EdgeInsets.only(
+                  top: 8,
+                  left: 8,
+                  right: 8,
+                  bottom: 80,
+                ),
+                itemCount: _nombresPlaylists.length,
 
-                return Card(
-                  child: ListTile(
-                    leading: const Icon(
-                      Icons.queue_music,
-                      color: Colors.redAccent,
-                      size: 40,
-                    ),
-                    title: Text(
-                      nombre,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    subtitle: Text('$cantidad canciones'),
-                    onTap: () async {
-                      // Navegamos a la pantalla de detalles
-                      await Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => PlaylistDetailScreen(
-                            nombrePlaylist: nombre,
-                            reproductor: widget.reproductor,
-                          ),
-                        ),
+                proxyDecorator: (child, index, animation) {
+                  return AnimatedBuilder(
+                    animation: animation,
+                    builder: (context, child) {
+                      return Material(
+                        elevation: 6.0,
+                        borderRadius: BorderRadius.circular(12),
+                        color: Theme.of(context).cardColor,
+                        child: child,
                       );
-                      // Refresca la vista al volver (por si se borraron canciones)
-                      setState(() {});
                     },
-                    trailing: PopupMenuButton<String>(
-                      onSelected: (valor) {
-                        if (valor == 'renombrar') {
-                          _mostrarDialogoPlaylist(indexParaRenombrar: index);
-                        }
-                        if (valor == 'eliminar') {
-                          _eliminarPlaylist(index);
-                        }
-                      },
-                      itemBuilder: (context) => [
-                        const PopupMenuItem(
-                          value: 'renombrar',
-                          child: Text('Renombrar'),
-                        ),
-                        const PopupMenuItem(
-                          value: 'eliminar',
-                          child: Text(
-                            'Eliminar',
-                            style: TextStyle(color: Colors.red),
+                    child: child,
+                  );
+                },
+
+                onReorder: (int oldIndex, int newIndex) {
+                  setState(() {
+                    if (newIndex > oldIndex) newIndex -= 1;
+                    final playlistMovida = _nombresPlaylists.removeAt(oldIndex);
+                    _nombresPlaylists.insert(newIndex, playlistMovida);
+                  });
+                  _guardarCambios();
+                },
+
+                itemBuilder: (context, index) {
+                  String nombre = _nombresPlaylists[index];
+                  int cantidad = _obtenerCantidadCanciones(nombre);
+
+                  return Card(
+                    key: ValueKey(nombre),
+                    child: ListTile(
+                      leading: const Icon(
+                        Icons.queue_music,
+                        color: Colors.redAccent,
+                        size: 40,
+                      ),
+                      title: Text(
+                        nombre,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: Text('$cantidad canciones'),
+                      onTap: () async {
+                        await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => PlaylistDetailScreen(
+                              nombrePlaylist: nombre,
+                              reproductor: widget.reproductor,
+                            ),
                           ),
-                        ),
-                      ],
+                        );
+                        setState(() {});
+                      },
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          PopupMenuButton<String>(
+                            onSelected: (valor) {
+                              if (valor == 'renombrar') {
+                                _mostrarDialogoPlaylist(
+                                  indexParaRenombrar: index,
+                                );
+                              }
+                              if (valor == 'eliminar') {
+                                _eliminarPlaylist(index);
+                              }
+                            },
+                            itemBuilder: (context) => [
+                              const PopupMenuItem(
+                                value: 'renombrar',
+                                child: Text('Renombrar'),
+                              ),
+                              const PopupMenuItem(
+                                value: 'eliminar',
+                                child: Text(
+                                  'Eliminar',
+                                  style: TextStyle(color: Colors.red),
+                                ),
+                              ),
+                            ],
+                          ),
+                          ReorderableDragStartListener(
+                            index: index,
+                            child: const Icon(
+                              Icons.drag_handle,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                );
-              },
+                  );
+                },
+              ),
             ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _mostrarDialogoPlaylist(),

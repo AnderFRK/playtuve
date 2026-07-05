@@ -5,7 +5,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:just_audio_background/just_audio_background.dart';
 
-import '../widgets/audio_card.dart';
 import '../widgets/mini_player.dart';
 import '../widgets/full_player.dart';
 
@@ -56,7 +55,28 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
     }
   }
 
-  // --- NUEVA LÓGICA PARA EL BOTÓN + ---
+  Future<void> _reproducirDesde(int index) async {
+    try {
+      final fuentes = _canciones.map((ruta) {
+        String nombre = ruta.split('/').last.replaceAll('.m4a', '');
+        return AudioSource.uri(
+          Uri.file(ruta),
+          tag: MediaItem(id: ruta, title: nombre, album: widget.nombrePlaylist),
+        );
+      }).toList();
+
+      final playlist = ConcatenatingAudioSource(children: fuentes);
+      await widget.reproductor.setAudioSource(playlist, initialIndex: index);
+      widget.reproductor.play();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error al reproducir: $e')));
+      }
+    }
+  }
+
   Future<void> _mostrarBuscadorDeCanciones() async {
     final directorioMusica = await getApplicationDocumentsDirectory();
     List<String> todasLasRutas = [];
@@ -80,9 +100,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
       ),
       builder: (context) {
         return Container(
-          height:
-              MediaQuery.of(context).size.height *
-              0.7, // Ocupa el 70% de la pantalla
+          height: MediaQuery.of(context).size.height * 0.7,
           padding: const EdgeInsets.symmetric(vertical: 16.0),
           child: Column(
             children: [
@@ -124,9 +142,8 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                                     color: Colors.redAccent,
                                   ),
                             onTap: yaEstaEnLista
-                                ? null // Si ya está, no hace nada
+                                ? null
                                 : () async {
-                                    // Añadimos a la base de datos y a la vista actual
                                     final prefs =
                                         await SharedPreferences.getInstance();
                                     setState(() {
@@ -136,12 +153,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                                       'playlist_${widget.nombrePlaylist}',
                                       _canciones,
                                     );
-
-                                    if (mounted) {
-                                      Navigator.pop(
-                                        context,
-                                      ); // Cierra el modal automáticamente al tocar una
-                                    }
+                                    if (mounted) Navigator.pop(context);
                                   },
                           );
                         },
@@ -156,6 +168,8 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    const double alturaMiniPlayer = 64.0;
+
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.nombrePlaylist),
@@ -164,7 +178,6 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
       ),
       body: Column(
         children: [
-          // 1. Todo el contenido de tu lista lo envolvemos en un Expanded
           Expanded(
             child: _cargando
                 ? const Center(child: CircularProgressIndicator())
@@ -176,56 +189,90 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                       style: TextStyle(color: Colors.grey),
                     ),
                   )
-                : ListView.builder(
-                    padding: const EdgeInsets.all(8),
+                : ReorderableListView.builder(
+                    padding: const EdgeInsets.only(
+                      top: 8,
+                      left: 8,
+                      right: 8,
+                      bottom: 140,
+                    ),
                     itemCount: _canciones.length,
-                    itemBuilder: (context, index) {
-                      String ruta = _canciones[index];
 
-                      return AudioCard(
-                        ruta: ruta,
-                        onPlay: () async {
-                          try {
-                            final playlist = ConcatenatingAudioSource(
-                              children: _canciones.map((rutaAudio) {
-                                String nombre = rutaAudio
-                                    .split('/')
-                                    .last
-                                    .replaceAll('.m4a', '');
-                                return AudioSource.uri(
-                                  Uri.file(rutaAudio),
-                                  tag: MediaItem(
-                                    id: rutaAudio,
-                                    title: nombre,
-                                    album: widget.nombrePlaylist,
-                                  ),
-                                );
-                              }).toList(),
-                            );
-
-                            await widget.reproductor.setAudioSource(
-                              playlist,
-                              initialIndex: index,
-                            );
-                            widget.reproductor.play();
-                          } catch (e) {
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Error al reproducir: $e'),
-                                ),
-                              );
-                            }
-                          }
+                    proxyDecorator: (child, index, animation) {
+                      return AnimatedBuilder(
+                        animation: animation,
+                        builder: (context, child) {
+                          return Material(
+                            elevation: 6.0,
+                            borderRadius: BorderRadius.circular(12),
+                            color: Colors.grey[850],
+                            child: child,
+                          );
                         },
-                        onDelete: () => _quitarDePlaylist(index),
-                        onAddPlaylist: () {},
+                        child: child,
+                      );
+                    },
+
+                    onReorder: (int oldIndex, int newIndex) async {
+                      setState(() {
+                        if (newIndex > oldIndex) newIndex -= 1;
+                        final cancionMovida = _canciones.removeAt(oldIndex);
+                        _canciones.insert(newIndex, cancionMovida);
+                      });
+
+                      final prefs = await SharedPreferences.getInstance();
+                      await prefs.setStringList(
+                        'playlist_${widget.nombrePlaylist}',
+                        _canciones,
+                      );
+                    },
+
+                    itemBuilder: (context, index) {
+                      final rutaCancion = _canciones[index];
+                      final nombreLimpio = rutaCancion
+                          .split('/')
+                          .last
+                          .replaceAll('.m4a', '');
+
+                      return Card(
+                        key: ValueKey(rutaCancion),
+                        child: ListTile(
+                          leading: const Icon(
+                            Icons.music_note,
+                            color: Colors.redAccent,
+                          ),
+                          title: Text(
+                            nombreLimpio,
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.delete,
+                                  color: Colors.grey,
+                                ),
+                                onPressed: () => _quitarDePlaylist(index),
+                              ),
+                              ReorderableDragStartListener(
+                                index: index,
+                                child: const Icon(
+                                  Icons.drag_handle,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                            ],
+                          ),
+                          onTap: () => _reproducirDesde(index),
+                        ),
                       );
                     },
                   ),
           ),
 
-          // 2. Aquí añadimos el MiniPlayer al fondo de la pantalla
           MiniPlayer(
             reproductor: widget.reproductor,
             onExpand: () {
@@ -241,12 +288,14 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
         ],
       ),
 
-      floatingActionButton: FloatingActionButton(
-        onPressed: _mostrarBuscadorDeCanciones,
-        backgroundColor: Colors.redAccent,
-        child: const Icon(Icons.add, color: Colors.white),
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: alturaMiniPlayer),
+        child: FloatingActionButton(
+          onPressed: _mostrarBuscadorDeCanciones,
+          backgroundColor: Colors.redAccent,
+          child: const Icon(Icons.add, color: Colors.white),
+        ),
       ),
-      // Elevamos el botón flotante un poco para que el MiniPlayer no lo tape
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }

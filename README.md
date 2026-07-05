@@ -1,17 +1,32 @@
-# playtuve
+# PlayTuve - Aplicación Móvil (Cliente Flutter)
 
-A new Flutter project.
+Este repositorio contiene el código fuente de la aplicación móvil de **PlayTuve**, un cliente híbrido desarrollado en **Flutter** que permite a los usuarios buscar, reproducir y descargar pistas de audio directamente a sus dispositivos móviles, conectándose de forma dinámica a su propio nodo de servidor doméstico.
 
-## Getting Started
+---
 
-This project is a starting point for a Flutter application.
+## Características Clave
 
-A few resources to get you started if this is your first Flutter project:
+* **Configuración Dinámica de Backend:** Pantalla dedicada para enlazar la aplicación a cualquier tipo de hosting del servidor (IP Local de la red WiFi, túneles seguros de Ngrok o conexiones SSH anónimas).
+* **Validación de Conectividad:** Sistema integrado de prueba de conexión ("Probar conexión") con manejo avanzado de excepciones de red (`ClientException`, redirecciones y timeouts).
+* **Descarga Directa de Flujos de Audio:** Recepción eficiente de archivos optimizados en formato de alta calidad (`.m4a` / AAC a 192kbps).
+* **Gestión de Almacenamiento Local:** Integración nativa con el sistema de archivos del dispositivo para guardar y organizar la música descargada de manera persistente.
+* **UI/UX Moderna:** Interfaz fluida basada en un esquema de diseño oscuro con acentos en rojo PlayTuve, optimizada para ofrecer una navegación intuitiva y reactiva.
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+---
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Requisitos Previos
+
+Antes de compilar o ejecutar la aplicación, asegúrate de contar con el entorno de desarrollo correctamente configurado:
+
+* **Flutter SDK:** Versión estable (compatible con Dart 3.x).
+* **Android Studio / VS Code:** Con las extensiones de Flutter y Dart instaladas.
+* **Dispositivo de Pruebas:** Un emulador configurado o un dispositivo físico Android/iOS con la *Depuración USB* activada.
+
+---
+
+## Instalación y Configuración
+
+1. **Clonar el repositorio móvil:**
+   ```bash
+   git clone [https://github.com/tu-usuario/playtuve_mobile.git](https://github.com/tu-usuario/playtuve_mobile.git)
+   cd playtuve_mobile

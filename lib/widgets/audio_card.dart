@@ -4,14 +4,14 @@ class AudioCard extends StatelessWidget {
   final String ruta;
   final VoidCallback onPlay;
   final VoidCallback onDelete;
-  final VoidCallback onAddPlaylist; // <-- 1. Agregamos esto
+  final VoidCallback onAddPlaylist;
 
   const AudioCard({
     super.key,
     required this.ruta,
     required this.onPlay,
     required this.onDelete,
-    required this.onAddPlaylist, // <-- 2. Lo pedimos aquí
+    required this.onAddPlaylist,
   });
 
   @override

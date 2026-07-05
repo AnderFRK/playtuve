@@ -41,8 +41,6 @@ class _LibraryScreenState extends State<LibraryScreen> {
     super.dispose();
   }
 
-  // --- LÓGICA DE ARCHIVOS ---
-
   Future<void> _cargarAudiosGuardados() async {
     try {
       final directorioMusica = await getApplicationDocumentsDirectory();
@@ -186,7 +184,6 @@ class _LibraryScreenState extends State<LibraryScreen> {
   Future<void> _descargarAudio() async {
     String urlOriginal = _urlController.text.trim();
 
-    // NUEVO: Leemos la URL de la base de datos justo al presionar el botón
     String backendActual = await BackendConfig.obtenerUrl();
 
     if (backendActual.isEmpty) {
